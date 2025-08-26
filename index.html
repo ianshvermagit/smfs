@@ -5,9 +5,25 @@
   <title>Student Fees Management</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { background: #f9f9f9; }
-    .card { border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-    .table-container { max-height: 400px; overflow-y: auto; }
+    body { 
+      background: linear-gradient(120deg, #89f7fe, #66a6ff);
+      min-height: 100vh;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .card { 
+      border-radius: 15px; 
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+    }
+    h2 { 
+      color: #fff; 
+      font-weight: bold; 
+      text-shadow: 1px 1px 3px rgba(0,0,0,0.3); 
+    }
+    table thead { background: #007bff; color: #fff; }
+    .btn-primary { background: #007bff; border: none; }
+    .btn-info { background: #17a2b8; border: none; }
+    .btn-danger { background: #dc3545; border: none; }
+    .btn-success { background: #28a745; border: none; }
   </style>
 </head>
 <body class="container py-4">
@@ -15,7 +31,7 @@
   <h2 class="text-center mb-4">📘 Student Fees Management</h2>
 
   <!-- Student Form -->
-  <div class="card p-3 mb-4">
+  <div class="card p-3 mb-4 bg-light">
     <h5>Add / Edit Student</h5>
     <input type="hidden" id="editIndex">
     <div class="row g-2">
@@ -23,23 +39,23 @@
       <div class="col-md-4"><input type="text" id="father" class="form-control" placeholder="Father's Name"></div>
       <div class="col-md-4"><input type="text" id="mobile" class="form-control" placeholder="Mobile"></div>
       <div class="col-md-6"><input type="text" id="address" class="form-control" placeholder="Address"></div>
-      <div class="col-md-6"><input type="number" id="fees" class="form-control" placeholder="Yearly Fees"></div>
+      <div class="col-md-3"><input type="number" id="fees" class="form-control" placeholder="Yearly Fees"></div>
+      <div class="col-md-3"><input type="date" id="enrollDate" class="form-control"></div>
     </div>
-    <button class="btn btn-primary mt-3" onclick="saveStudent()">Save Student</button>
+    <button class="btn btn-primary mt-3" onclick="saveStudent()">💾 Save Student</button>
   </div>
 
   <!-- Students Table -->
-  <div class="card p-3 mb-4">
+  <div class="card p-3 mb-4 bg-light">
     <h5>Students List</h5>
-
-    <!-- 🔍 Search Box -->
-    <input type="text" id="searchInput" class="form-control mb-2" placeholder="Search by Name..." onkeyup="renderTable()">
+    <input type="text" id="searchInput" class="form-control mb-2" placeholder="🔍 Search by Name..." onkeyup="renderTable()">
 
     <div class="table-container">
       <table class="table table-bordered table-striped">
         <thead>
           <tr>
-            <th>Name</th><th>Father</th><th>Mobile</th><th>Address</th><th>Fees</th><th>Paid</th><th>Balance</th><th>Actions</th>
+            <th>Name</th><th>Father</th><th>Mobile</th><th>Address</th>
+            <th>Fees</th><th>Paid</th><th>Balance</th><th>Enrollment Date</th><th>Actions</th>
           </tr>
         </thead>
         <tbody id="studentTable"></tbody>
@@ -48,33 +64,35 @@
   </div>
 
   <!-- CSV Export -->
-  <div class="mb-3">
-    <button class="btn btn-success" onclick="exportCSV()">Export CSV</button>
+  <div class="mb-3 text-center">
+    <button class="btn btn-success" onclick="exportCSV()">⬇ Export CSV</button>
   </div>
 
   <script>
     let students = JSON.parse(localStorage.getItem("students")) || [];
 
     function saveStudent(){
-      let name = document.getElementById("name").value;
-      let father = document.getElementById("father").value;
-      let mobile = document.getElementById("mobile").value;
-      let address = document.getElementById("address").value;
-      let fees = document.getElementById("fees").value;
+      let name = document.getElementById("name").value.trim();
+      let father = document.getElementById("father").value.trim();
+      let mobile = document.getElementById("mobile").value.trim();
+      let address = document.getElementById("address").value.trim();
+      let fees = Number(document.getElementById("fees").value.trim()) || 0; // default 0 if empty
+      let enrollDate = document.getElementById("enrollDate").value;
       let idx = document.getElementById("editIndex").value;
 
-      if(!name || !fees){ alert("Name aur Fees required hain!"); return; }
+      if(!name){ alert("⚠ Student name required!"); return; }
 
-      if(idx){
-        students[idx] = {...students[idx], name,father,mobile,address,fees};
+      if(idx !== ""){
+        let oldPayments = students[idx].payments || [];
+        students[idx] = {name,father,mobile,address,fees,enrollDate, payments:oldPayments};
         document.getElementById("editIndex").value = "";
       } else {
-        students.push({name,father,mobile,address,fees, payments:[]});
+        students.push({name,father,mobile,address,fees,enrollDate, payments:[]});
       }
 
       localStorage.setItem("students", JSON.stringify(students));
-      renderTable();
       clearForm();
+      renderTable();  // ✅ Refresh list after save
     }
 
     function clearForm(){
@@ -83,6 +101,8 @@
       document.getElementById("mobile").value="";
       document.getElementById("address").value="";
       document.getElementById("fees").value="";
+      document.getElementById("enrollDate").value="";
+      document.getElementById("editIndex").value="";
     }
 
     function renderTable(){
@@ -90,23 +110,24 @@
       let searchText = document.getElementById("searchInput").value.toLowerCase();
       table.innerHTML="";
       students
-        .filter(s => s.name.toLowerCase().includes(searchText))
+        .filter(s => s.name && s.name.toLowerCase().includes(searchText)) // ✅ sirf Name se search
         .forEach((s,i)=>{
-          let paid = s.payments.reduce((a,b)=>a+Number(b.amount),0);
-          let balance = s.fees - paid;
+          let paid = (s.payments || []).reduce((a,b)=>a+Number(b.amount),0);
+          let balance = Number(s.fees) - paid;
           table.innerHTML += `
             <tr>
               <td>${s.name}</td>
-              <td>${s.father}</td>
-              <td>${s.mobile}</td>
-              <td>${s.address}</td>
+              <td>${s.father || ""}</td>
+              <td>${s.mobile || ""}</td>
+              <td>${s.address || ""}</td>
               <td>${s.fees}</td>
               <td>${paid}</td>
               <td>${balance}</td>
+              <td>${s.enrollDate || ""}</td>
               <td>
-                <button class='btn btn-sm btn-info' onclick='editStudent(${i})'>Edit</button>
-                <button class='btn btn-sm btn-danger' onclick='deleteStudent(${i})'>Delete</button>
-                <button class='btn btn-sm btn-success' onclick='addPayment(${i})'>Add Payment</button>
+                <button class='btn btn-sm btn-info' onclick='editStudent(${i})'>✏ Edit</button>
+                <button class='btn btn-sm btn-danger' onclick='deleteStudent(${i})'>🗑 Delete</button>
+                <button class='btn btn-sm btn-success' onclick='addPayment(${i})'>💰 Add Payment</button>
               </td>
             </tr>`;
         });
@@ -119,11 +140,12 @@
       document.getElementById("mobile").value=s.mobile;
       document.getElementById("address").value=s.address;
       document.getElementById("fees").value=s.fees;
+      document.getElementById("enrollDate").value=s.enrollDate;
       document.getElementById("editIndex").value=i;
     }
 
     function deleteStudent(i){
-      if(confirm("Delete this student?")){
+      if(confirm("⚠ Delete this student?")){
         students.splice(i,1);
         localStorage.setItem("students", JSON.stringify(students));
         renderTable();
@@ -140,9 +162,9 @@
     }
 
     function exportCSV(){
-      let rows = [["Name","Father","Mobile","Address","Fees","Payments"]];
+      let rows = [["Name","Father","Mobile","Address","Fees","Enrollment Date","Payments"]];
       students.forEach(s=>{
-        rows.push([s.name,s.father,s.mobile,s.address,s.fees, JSON.stringify(s.payments)]);
+        rows.push([s.name,s.father,s.mobile,s.address,s.fees,s.enrollDate, JSON.stringify(s.payments)]);
       });
       let csvContent = rows.map(e=>e.join(",")).join("\n");
       let blob = new Blob([csvContent], {type:"text/csv"});
@@ -151,7 +173,7 @@
       a.href = url; a.download = "students.csv"; a.click();
     }
 
-    renderTable();
+    renderTable(); // ✅ Show existing data on page load
   </script>
 </body>
 </html>
