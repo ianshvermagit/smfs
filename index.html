@@ -215,7 +215,12 @@ function renderTable(studentsData = students) {
       <tr class="${rowClass}">
         <td>${s.name}</td>
         <td>${s.father || ""}</td>
-        <td>${s.mobile || ""}</td>
+        <td>
+          ${s.mobile || ""}
+          ${s.mobile ? `<br>
+            <a href="tel:${s.mobile}" class="btn btn-sm btn-outline-primary mt-1">📞 Call</a>
+            <a href="https://wa.me/${s.mobile}" target="_blank" class="btn btn-sm btn-outline-success mt-1">💬 WhatsApp</a>` : ""}
+        </td>
         <td>${s.address || ""}</td>
         <td>${s.fees}</td>
         <td>${paid}</td>
