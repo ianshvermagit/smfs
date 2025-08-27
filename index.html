@@ -39,8 +39,6 @@
       box-shadow: 0 3px 8px rgba(0,0,0,0.2);
     }
     .btn { border-radius: 20px; }
-
-    /* LOGIN BOX STYLE */
     #loginBox {
       max-width: 400px;
       margin: 100px auto;
@@ -99,7 +97,7 @@
       <div class="card p-3">
         <h5>Student List</h5>
         <div class="table-responsive">
-          <table class="table table-bordered text-center align-middle">
+          <table class="table table-bordered text-center align-middle" id="studentData">
             <thead>
               <tr>
                 <th>Name</th>
@@ -117,9 +115,15 @@
           </table>
         </div>
       </div>
+
+      <!-- ✅ Excel Export Button (centered below student list) -->
+      <div class="text-center mt-3">
+        <button class="btn btn-success" onclick="exportToExcel()">⬇ Export to Excel</button>
+      </div>
     </div>
   </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 /* -------- LOGIN LOGIC -------- */
 function checkLogin() {
@@ -250,6 +254,13 @@ setInterval(updateDateTime, 1000);
 updateDateTime();
 
 renderTable();
+
+/* -------- EXPORT TO EXCEL -------- */
+function exportToExcel() {
+  let table = document.getElementById("studentData");
+  let wb = XLSX.utils.table_to_book(table, { sheet: "Students" });
+  XLSX.writeFile(wb, "Student_Fees_Data.xlsx");
+}
 </script>
 </body>
 </html>
