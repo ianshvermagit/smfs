@@ -22,38 +22,23 @@
     table { background: #fff; border-radius: 10px; overflow: hidden; }
     th { background: linear-gradient(90deg, #007bff, #00c6ff); color: white; }
     .due-row { background: #ffe6e6 !important; color: red !important; font-weight: bold; font-style: italic; }
-    h2 {
-      font-weight: bold;
-      color: #222;
-      text-shadow: 2px 2px 6px rgba(0,0,0,0.2);
-    }
+    h2 { font-weight: bold; color: #222; text-shadow: 2px 2px 6px rgba(0,0,0,0.2); }
     #datetime {
-      font-size: 16px;
-      font-weight: bold;
-      color: #444;
-      background: #fff3cd;
-      padding: 6px 14px;
-      border-radius: 20px;
-      display: inline-block;
-      margin-left: 15px;
+      font-size: 16px; font-weight: bold; color: #444;
+      background: #fff3cd; padding: 6px 14px; border-radius: 20px;
+      display: inline-block; margin-left: 15px;
       box-shadow: 0 3px 8px rgba(0,0,0,0.2);
     }
     .btn { border-radius: 20px; }
     #loginBox {
-      max-width: 400px;
-      margin: 100px auto;
-      background: white;
-      padding: 30px;
-      border-radius: 20px;
+      max-width: 400px; margin: 100px auto; background: white;
+      padding: 30px; border-radius: 20px;
       box-shadow: 0 8px 20px rgba(0,0,0,0.2);
       text-align: center;
     }
-    #loginBox h3 {
-      font-weight: bold;
-      margin-bottom: 20px;
-      color: #007bff;
-    }
+    #loginBox h3 { font-weight: bold; margin-bottom: 20px; color: #007bff; }
     #mainApp { display: none; }
+    #recycleBinSection { display: none; }
   </style>
 </head>
 <body>
@@ -82,6 +67,7 @@
           <div class="col-md-3"><input id="father" class="form-control" placeholder="Father's Name"></div>
           <div class="col-md-2"><input id="mobile" class="form-control" placeholder="Mobile"></div>
           <div class="col-md-4"><input id="address" class="form-control" placeholder="Address"></div>
+          <div class="col-md-3"><input id="aadhar" class="form-control" placeholder="Aadhar Card"></div>
           <div class="col-md-3"><input id="fees" type="number" class="form-control" placeholder="Total Fees"></div>
           <div class="col-md-3"><input id="enrollDate" type="date" class="form-control"></div>
           <div class="col-md-3"><button class="btn btn-primary w-100" onclick="addStudent()">Save Student</button></div>
@@ -104,6 +90,7 @@
                 <th>Father</th>
                 <th>Mobile</th>
                 <th>Address</th>
+                <th>Aadhar</th>
                 <th>Total Fees</th>
                 <th>Paid</th>
                 <th>Balance</th>
@@ -116,9 +103,25 @@
         </div>
       </div>
 
-      <!-- ✅ Excel Export Button (centered below student list) -->
+      <!-- ✅ Excel Export Button -->
       <div class="text-center mt-3">
         <button class="btn btn-success" onclick="exportToExcel()">⬇ Export to Excel</button>
+        <button class="btn btn-dark ms-3" onclick="openRecycleBin()">🗑 Recycle Bin</button>
+      </div>
+
+      <!-- ♻ Recycle Bin Section -->
+      <div id="recycleBinSection" class="card p-3 mt-4">
+        <h5>♻ Deleted Students (Recycle Bin)</h5>
+        <div class="table-responsive">
+          <table class="table table-bordered text-center align-middle">
+            <thead>
+              <tr>
+                <th>Name</th><th>Father</th><th>Mobile</th><th>Address</th><th>Aadhar</th><th>Fees</th><th>Enroll Date</th><th>Balance</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="recycleTable"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -139,11 +142,16 @@ function checkLogin() {
 
 /* -------- STUDENT FEES MANAGEMENT LOGIC -------- */
 let students = JSON.parse(localStorage.getItem("students") || "[]");
+let recycleBin = JSON.parse(localStorage.getItem("recycleBin") || "[]");
 let editIndex = -1;
 
 function saveData() {
   localStorage.setItem("students", JSON.stringify(students));
+  localStorage.setItem("recycleBin", JSON.stringify(recycleBin));
   renderTable();
+  if (document.getElementById("recycleBinSection").style.display === "block") {
+    renderRecycleBin();
+  }
 }
 
 function addStudent() {
@@ -151,15 +159,16 @@ function addStudent() {
   const father = document.getElementById("father").value;
   const mobile = document.getElementById("mobile").value;
   const address = document.getElementById("address").value;
+  const aadhar = document.getElementById("aadhar").value;
   const fees = parseInt(document.getElementById("fees").value || 0);
   const enrollDate = document.getElementById("enrollDate").value;
 
   if (!name || !fees) return alert("Please enter student name and fees!");
 
   if (editIndex === -1) {
-    students.push({ name, father, mobile, address, fees, payments: [], enrollDate });
+    students.push({ name, father, mobile, address, aadhar, fees, payments: [], enrollDate });
   } else {
-    students[editIndex] = { ...students[editIndex], name, father, mobile, address, fees, enrollDate };
+    students[editIndex] = { ...students[editIndex], name, father, mobile, address, aadhar, fees, enrollDate };
     editIndex = -1;
   }
   saveData();
@@ -167,7 +176,7 @@ function addStudent() {
 }
 
 function clearForm() {
-  document.querySelectorAll("input").forEach(inp => inp.value = "");
+  document.querySelectorAll("#mainApp input").forEach(inp => inp.value = "");
 }
 
 function editStudent(i) {
@@ -176,6 +185,7 @@ function editStudent(i) {
   document.getElementById("father").value = s.father;
   document.getElementById("mobile").value = s.mobile;
   document.getElementById("address").value = s.address;
+  document.getElementById("aadhar").value = s.aadhar;
   document.getElementById("fees").value = s.fees;
   document.getElementById("enrollDate").value = s.enrollDate;
   editIndex = i;
@@ -183,6 +193,7 @@ function editStudent(i) {
 
 function deleteStudent(i) {
   if (confirm("Delete this student?")) {
+    recycleBin.push(students[i]);
     students.splice(i, 1);
     saveData();
   }
@@ -209,9 +220,9 @@ function renderTable(studentsData = students) {
   const table = document.getElementById("studentTable");
   table.innerHTML = "";
   studentsData.forEach((s, i) => {
-    let paid = s.payments.reduce((a, b) => a + b, 0);
+    let paid = (s.payments && s.payments.length) ? s.payments.reduce((a, b) => a + b, 0) : 0;
     let monthsPassed = calculateMonthsPassed(s.enrollDate);
-    let expectedFees = s.fees * monthsPassed;
+    let expectedFees = (s.fees || 0) * monthsPassed;
     let balance = expectedFees - paid;
     let rowClass = balance > 0 ? "due-row" : "";
 
@@ -226,6 +237,7 @@ function renderTable(studentsData = students) {
             <a href="https://wa.me/${s.mobile}" target="_blank" class="btn btn-sm btn-outline-success mt-1">💬 WhatsApp</a>` : ""}
         </td>
         <td>${s.address || ""}</td>
+        <td>${s.aadhar || ""}</td>
         <td>${s.fees}</td>
         <td>${paid}</td>
         <td>${balance}</td>
@@ -252,7 +264,6 @@ function updateDateTime() {
 }
 setInterval(updateDateTime, 1000);
 updateDateTime();
-
 renderTable();
 
 /* -------- EXPORT TO EXCEL -------- */
@@ -260,6 +271,55 @@ function exportToExcel() {
   let table = document.getElementById("studentData");
   let wb = XLSX.utils.table_to_book(table, { sheet: "Students" });
   XLSX.writeFile(wb, "Student_Fees_Data.xlsx");
+}
+
+/* -------- RECYCLE BIN FEATURE -------- */
+function openRecycleBin() {
+  let pass = prompt("Enter Recycle Bin Password:");
+  if (pass === "12345") {
+    document.getElementById("recycleBinSection").style.display = "block";
+    renderRecycleBin();
+  } else {
+    alert("Wrong Password!");
+  }
+}
+
+function renderRecycleBin() {
+  const rTable = document.getElementById("recycleTable");
+  rTable.innerHTML = "";
+  recycleBin.forEach((s, idx) => {
+    let paid = (s.payments && s.payments.length) ? s.payments.reduce((a, b) => a + b, 0) : 0;
+    let monthsPassed = calculateMonthsPassed(s.enrollDate);
+    let expectedFees = (s.fees || 0) * monthsPassed;
+    let balance = expectedFees - paid;
+
+    rTable.innerHTML += `
+      <tr>
+        <td>${s.name}</td>
+        <td>${s.father || ""}</td>
+        <td>${s.mobile || ""}</td>
+        <td>${s.address || ""}</td>
+        <td>${s.aadhar || ""}</td>
+        <td>${s.fees}</td>
+        <td>${s.enrollDate || ""}</td>
+        <td>${balance}</td>
+        <td>
+          <button class="btn btn-sm btn-danger" onclick="permanentDelete(${idx})">🗑 Delete Permanently</button>
+        </td>
+      </tr>`;
+  });
+}
+
+function permanentDelete(index) {
+  let pass = prompt("Enter Recycle Bin Password to permanently delete:");
+  if (pass !== "12345") {
+    alert("Wrong Password!");
+    return;
+  }
+  if (!confirm("Are you sure you want to permanently delete this student from Recycle Bin? This cannot be undone.")) return;
+  recycleBin.splice(index, 1);
+  saveData();
+  renderRecycleBin();
 }
 </script>
 </body>
